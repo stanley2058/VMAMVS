@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
@@ -54,6 +55,9 @@ public class SpringRestTool {
                 appsList = restTemplate.getForObject(url, AppsList.class);
             } catch (ResourceAccessException e) {
                 logger.error(e.getMessage(), e);
+            } catch (HttpClientErrorException ex) {
+                System.err.println("http://" + instance.getIpAddr() + ":" + instance.getPort() + EUREKA_V1_BASEPATH + "/apps/");
+                ex.printStackTrace();
             }
         }
         return appsList;
@@ -202,7 +206,7 @@ public class SpringRestTool {
 
     public String getVersionFromRemoteApp(String serviceUrl) {
         try {
-            Info appInfo = restTemplate.getForObject( serviceUrl + ACTUATOR_V1_BASEPATH + "/info", Info.class);
+            Info appInfo = restTemplate.getForObject( serviceUrl + ACTUATOR_V2_BASEPATH + "/info", Info.class);
             if (appInfo != null) {
                 return appInfo.getVersion();
             } else {
@@ -211,12 +215,16 @@ public class SpringRestTool {
         } catch (ResourceAccessException e) {
             logger.error(e.getMessage(), e);
             return null;
+        } catch (HttpClientErrorException ex) {
+            System.err.println(serviceUrl + ACTUATOR_V2_BASEPATH + "/info");
+            ex.printStackTrace();
+            return null;
         }
     }
 
     public List<Trace> getTraceFromRemoteApp(String appUrl) {
         try {
-            Trace[] traces = restTemplate.getForObject( appUrl + ACTUATOR_V1_BASEPATH + "/trace", Trace[].class);
+            Trace[] traces = restTemplate.getForObject( appUrl + ACTUATOR_V2_BASEPATH + "/trace", Trace[].class);
             if (traces != null) {
                 return Arrays.asList(traces);
             } else {

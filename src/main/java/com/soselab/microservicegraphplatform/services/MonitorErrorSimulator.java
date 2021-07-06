@@ -6,7 +6,7 @@ import com.soselab.microservicegraphplatform.bean.mgp.monitor.error.RequestError
 import com.soselab.microservicegraphplatform.bean.mgp.monitor.error.ResponseError;
 import com.soselab.microservicegraphplatform.bean.neo4j.Service;
 import com.soselab.microservicegraphplatform.repositories.neo4j.ServiceRepository;
-import jdk.vm.ci.services.Services;
+//import jdk.vm.ci.services.Services;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 
