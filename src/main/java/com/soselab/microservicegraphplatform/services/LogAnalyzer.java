@@ -47,7 +47,7 @@ public class LogAnalyzer {
 
     public List<MgpLog> getRecentResponseLogs(String systemName, String appName, String version, int size) {
         return httpRequestAndResponseRepository.findResponseBySystemNameAndAppNameAndVersion
-                (systemName, appName, version, new PageRequest(0, size, new Sort(Sort.Direction.DESC, "@timestamp")));
+                (systemName, appName, version, new PageRequest(0, size, new Sort(Sort.Direction.DESC, "timestamp")));
     }
 
     // 單個服務的單次回應
@@ -117,7 +117,7 @@ public class LogAnalyzer {
     // 計算服務在一段時間被使用的程度 （有公式）
     public Float getAppUsageMetrics(String systemName, String appName, String version, int samplingDurationMinutes) {
         List<MgpLog> requests = httpRequestAndResponseRepository.findRecentMinutesRequestBySystemNameAndAppNameAndVersion
-                (systemName, appName, version, samplingDurationMinutes, new PageRequest(0, 10000, new Sort(Sort.Direction.DESC, "@timestamp")));
+                (systemName, appName, version, samplingDurationMinutes, new PageRequest(0, 10000, new Sort(Sort.Direction.DESC, "timestamp")));
         // 時間沒對到 這邊先+8對應
         LocalDateTime endDateTime = LocalDateTime.now().plusHours(8);
         //System.out.println("enddatetime：" + endDateTime);

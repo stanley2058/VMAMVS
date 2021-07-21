@@ -172,11 +172,11 @@ public class MonitorService {
 
 
         // 以下為模擬錯誤使用的方法
-        /*List<MonitorError> simulatorMonitorErrors = monitorErrorSimulator.simulateErrors(systemName);
+        /* List<MonitorError> simulatorMonitorErrors = monitorErrorSimulator.simulateErrors(systemName);
         allMonitorErrorList.merge(systemName, new ArrayList<>(simulatorMonitorErrors),
                 (oldList, newList) -> pushMonitorError(oldList, simulatorMonitorErrors));
         allSimulateMonitorErrorList.remove(systemName);
-        allSimulateMonitorErrorList.put(systemName, simulatorMonitorErrors);*/
+        allSimulateMonitorErrorList.put(systemName, simulatorMonitorErrors); */
         // ------------------------------------------------
 
         if(!allMonitorErrorList.get(systemName).isEmpty() && allMonitorErrorList.get(systemName).size() > 0){
@@ -748,7 +748,7 @@ public class MonitorService {
         List<MonitorError> monitorErrorList = allMonitorErrorList.getOrDefault(systemName, new ArrayList<>());
 
         // 模擬錯誤用的方法
-        //List<MonitorError> monitorErrorList = allSimulateMonitorErrorList.getOrDefault(systemName, new ArrayList<>());
+//        List<MonitorError> monitorErrorList = allSimulateMonitorErrorList.getOrDefault(systemName, new ArrayList<>());
         long nowTime = System.currentTimeMillis();
 
         for ( int i = 0; i < totalDay; i+= timeInterval) {
