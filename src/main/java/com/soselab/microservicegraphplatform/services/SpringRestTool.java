@@ -206,7 +206,7 @@ public class SpringRestTool {
 
     public String getVersionFromRemoteApp(String serviceUrl) {
         try {
-            Info appInfo = restTemplate.getForObject( serviceUrl + ACTUATOR_V2_BASEPATH + "/info", Info.class);
+            Info appInfo = restTemplate.getForObject( serviceUrl + ACTUATOR_V1_BASEPATH + "/info", Info.class);
             if (appInfo != null) {
                 return appInfo.getVersion();
             } else {
@@ -216,7 +216,7 @@ public class SpringRestTool {
             logger.error(e.getMessage(), e);
             return null;
         } catch (HttpClientErrorException ex) {
-            System.err.println(serviceUrl + ACTUATOR_V2_BASEPATH + "/info");
+            System.err.println(serviceUrl + ACTUATOR_V1_BASEPATH + "/info");
             ex.printStackTrace();
             return null;
         }
@@ -224,7 +224,7 @@ public class SpringRestTool {
 
     public List<Trace> getTraceFromRemoteApp(String appUrl) {
         try {
-            Trace[] traces = restTemplate.getForObject( appUrl + ACTUATOR_V2_BASEPATH + "/trace", Trace[].class);
+            Trace[] traces = restTemplate.getForObject( appUrl + ACTUATOR_V1_BASEPATH + "/trace", Trace[].class);
             if (traces != null) {
                 return Arrays.asList(traces);
             } else {
