@@ -30,6 +30,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Configuration
 public class MonitorService {
@@ -172,11 +173,11 @@ public class MonitorService {
 
 
         // 以下為模擬錯誤使用的方法
-        /* List<MonitorError> simulatorMonitorErrors = monitorErrorSimulator.simulateErrors(systemName);
+        List<MonitorError> simulatorMonitorErrors = monitorErrorSimulator.simulateErrors(systemName);
         allMonitorErrorList.merge(systemName, new ArrayList<>(simulatorMonitorErrors),
                 (oldList, newList) -> pushMonitorError(oldList, simulatorMonitorErrors));
         allSimulateMonitorErrorList.remove(systemName);
-        allSimulateMonitorErrorList.put(systemName, simulatorMonitorErrors); */
+        allSimulateMonitorErrorList.put(systemName, simulatorMonitorErrors);
         // ------------------------------------------------
 
         if(!allMonitorErrorList.get(systemName).isEmpty() && allMonitorErrorList.get(systemName).size() > 0){
@@ -244,8 +245,8 @@ public class MonitorService {
                                         }
                                     }
                                 }
-                            } catch (JsonProcessingException e) {
-                                e.printStackTrace();
+                            } catch (Exception e) {
+//                                e.printStackTrace();
                             }
 
                         }
@@ -309,8 +310,8 @@ public class MonitorService {
                                         monitorErrors.get(monitorErrors.indexOf(monitorError)).setTestedPASS(true);
 
                                 }
-                            } catch (JsonProcessingException e) {
-                                e.printStackTrace();
+                            } catch (Exception e) {
+//                                e.printStackTrace();
                             }
 
                         }
@@ -706,26 +707,30 @@ public class MonitorService {
             monitorError.setIndex(0);
         }
 
-        if(!monitorErrors2.isEmpty()) {
-            // 刪除重複
-            for(int i = monitorErrors.size() - 1; i >= 0; i--){
-                MonitorError monitorError = monitorErrors.get(i);
+        HashSet<MonitorError> set = new HashSet<>(monitorErrors2);
+        set.addAll(monitorErrors);
+        return new ArrayList<>(set);
 
-                for(int j = 0; j < monitorErrors2.size(); j++){
-                    MonitorError monitorError2 = monitorErrors2.get(j);
-                    if(monitorError.getTimestamp() == monitorError2.getTimestamp() &&
-                            monitorError.getErrorUrl().equals(monitorError2.getErrorUrl()) &&
-                            monitorError.getErrorType().equals(monitorError2.getErrorType()) &&
-                            monitorError.getErrorAppId().equals(monitorError2.getErrorAppId())){
-                        monitorErrors.remove(monitorErrors.indexOf(monitorError));
-                    }
-                }
-            }
-
-            monitorErrors.addAll(0, monitorErrors2);
-        }
-
-        return monitorErrors;
+//        if(!monitorErrors2.isEmpty()) {
+//            // 刪除重複
+//            for(int i = monitorErrors.size() - 1; i >= 0; i--){
+//                MonitorError monitorError = monitorErrors.get(i);
+//
+//                for(int j = 0; j < monitorErrors2.size(); j++){
+//                    MonitorError monitorError2 = monitorErrors2.get(j);
+//                    if(monitorError.getTimestamp() == monitorError2.getTimestamp() &&
+//                            monitorError.getErrorUrl().equals(monitorError2.getErrorUrl()) &&
+//                            monitorError.getErrorType().equals(monitorError2.getErrorType()) &&
+//                            monitorError.getErrorAppId().equals(monitorError2.getErrorAppId())){
+//                        monitorErrors.remove(monitorErrors.indexOf(monitorError));
+//                    }
+//                }
+//            }
+//
+//            monitorErrors.addAll(0, monitorErrors2);
+//        }
+//
+//        return monitorErrors;
     }
 
     public List<MonitorError> getErrorsOfSystem(String systemName) {

@@ -23,8 +23,8 @@ public class MonitorErrorSimulator {
     private ServiceRepository serviceRepository;
 
     Random random = new Random();
-    final int minErrorNum = 150;
-    final int maxErrorNum = 450;
+    final int minErrorNum = 500;
+    final int maxErrorNum = 1000;
 
     final int timeInterval = 140;
 

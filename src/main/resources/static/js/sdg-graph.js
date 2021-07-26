@@ -394,13 +394,16 @@ function SDGGraph(data) {
         collapseData.links.forEach(link => { link.highlight_error_source = false });
 
         d.nodes.forEach(HNode => {
-            findNodeById(HNode.id).highlight_error = true;
+            const node = findNodeById(HNode.id);
+            if (node) node.highlight_error = true;
+            else console.log(HNode)
             let colNode = collapseData.nodes.find(node => node.id === HNode.id);
             if (colNode) colNode.highlight_error = true;
         });
 
         d.links.forEach(HLink => {
-            findLinkById(HLink.type + ":" + HLink.source + "-" + HLink.target).highlight_error = true;
+            const node = findLinkById(HLink.type + ":" + HLink.source + "-" + HLink.target);
+            if (node) node.highlight_error = true;
             let colLink = collapseData.links.find(link =>
                 link.type === HLink.type &&
                 link.source.id === HLink.source &&
@@ -409,13 +412,15 @@ function SDGGraph(data) {
         });
 
         d.sourceNodes.forEach(HNode => {
-            findNodeById(HNode.id).highlight_error_source = true;
+            const node = findNodeById(HNode.id);
+            if (node) node.highlight_error_source = true;
             let colNode = collapseData.nodes.find(node => node.id === HNode.id);
             if (colNode) colNode.highlight_error_source = true;
         });
 
         d.sourceLinks.forEach(HLink => {
-            findLinkById(HLink.type + ":" + HLink.source + "-" + HLink.target).highlight_error_source = true;
+            const node = findLinkById(HLink.type + ":" + HLink.source + "-" + HLink.target);
+            if (node) node.highlight_error_source = true;
             let colLink = collapseData.links.find(link =>
                 link.type === HLink.type &&
                 link.source.id === HLink.source &&
@@ -2200,9 +2205,60 @@ function SDGGraph(data) {
                 })
         }
 
+        function translateId(oldData) {
+            const { errorServices, errorEndpoints, errorLinks } = oldData;
+            const allNode = [...errorServices, ...errorEndpoints];
+            const { nodes } = data;
+
+            const reducedNodes = nodes.map((n) => {
+                if (n.appId)
+                    return {
+                        appId: n.appId,
+                        id: n.id,
+                    };
+                return {
+                    path: n.path,
+                    appName: n.appName,
+                    id: n.id,
+                };
+            });
+
+            const idMap = allNode.map((n) => {
+                const trueNode = reducedNodes.find((rn) => {
+                    return n.appId
+                        ? rn.appId === n.appId
+                        : rn.path === n.path && rn.appName === n.parentAppName;
+                });
+                return {
+                    oId: n.id,
+                    nId: trueNode.id,
+                };
+            });
+
+            const newNode = allNode.map((n) => {
+                const { nId } = idMap.find((i) => i.oId === n.id);
+                n.id = nId;
+                return n;
+            });
+
+            const newLinks = errorLinks.map((l) => {
+                const { aid, bid } = l;
+                const aNId = idMap.find((i) => i.oId === aid);
+                const bNId = idMap.find((i) => i.oId === bid);
+                l.aid = aNId.nId;
+                l.bid = bNId.nId;
+                return l;
+            });
+
+            oldData.errorServices = errorServices;
+            oldData.errorEndpoints = errorEndpoints;
+            oldData.errorLinks = errorLinks;
+            return oldData;
+        }
+
         function clickHandler(event) {
             let index_everyError = event.data.index;
-            let json_content = event.data.jsonContent;
+            let json_content = translateId(event.data.jsonContent);
 
             let errorId = "error-" + index_everyError;
 
@@ -2327,7 +2383,6 @@ function SDGGraph(data) {
                 highlightJson += "}";
 
                 let highlighttoJson = JSON.parse(highlightJson);
-                console.log("highlightJson: " + highlightJson);
                 highlight_error(highlighttoJson);
             } else {
                 $('#' + errorId).removeClass("active");

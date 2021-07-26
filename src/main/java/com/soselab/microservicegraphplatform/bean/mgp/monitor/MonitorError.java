@@ -2,6 +2,7 @@ package com.soselab.microservicegraphplatform.bean.mgp.monitor;
 
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class MonitorError {
 
@@ -191,5 +192,18 @@ public class MonitorError {
 
     public void setTestedPASS(boolean testedPASS) {
         this.testedPASS = testedPASS;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MonitorError that = (MonitorError) o;
+        return timestamp == that.timestamp && Objects.equals(errorAppId, that.errorAppId) && Objects.equals(errorUrl, that.errorUrl) && Objects.equals(errorType, that.errorType);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(errorAppId, timestamp, errorUrl, errorType);
     }
 }

@@ -72,8 +72,10 @@ public class ContractService {
 
                                     for (int i = 0; i < jsonArr.length(); i++) {
                                         String status = null;
-                                        JSONObject obj = jsonArr.getJSONObject(i).getJSONObject("testResult");
-                                        if (obj != null) status = obj.getString("status");
+                                        try {
+                                            JSONObject obj = jsonArr.getJSONObject(i).getJSONObject("testResult");
+                                            if (obj != null) status = obj.getString("status");
+                                        } catch (Exception e) {}
                                         if (status == null) condition = CONTRACTMISSINGCONDITION_FALSE;
                                         else if (status.equals("FAIL")) {
                                             serviceRepository.setContractTestingConditionByAppId(s.getAppId(), CONTRACTTESTINGCONDITION_WARNING);

@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -285,6 +286,14 @@ public class WebPageController {
     @GetMapping("/monitor/getRiskPositivelyCorrelatedChart/{systemName}")
     public RiskPositivelyCorrelatedChart getRiskPositivelyCorrelatedChart(@PathVariable("systemName") String systemName) {
         return riskService.getRiskPositivelyCorrelatedChart(systemName);
+    }
+
+    @GetMapping("/force/schedule/{systemName}")
+    public ResponseEntity<?> forceSchedule(@PathVariable String systemName) {
+
+        monitorService.runScheduled(systemName);
+        monitorService.hourScheduled();
+        return ResponseEntity.ok("");
     }
 //
 ////    @RequestMapping(value = "/getImage/{systemName}",produces = MediaType.IMAGE_PNG_VALUE)

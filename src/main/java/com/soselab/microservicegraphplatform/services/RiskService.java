@@ -29,7 +29,7 @@ public class RiskService {
     private MonitorService monitorService;
 
     private final int totalDay = 84; // 總天數84天
-    private final int timeInterval = 21; // 21天為間隔
+    private final int timeInterval = 28; // 28天為間隔
     private final int moveInterval = 1; // 每次移動的距離
 
     private final int beginTime1 = 8; // 第2周開始
@@ -62,7 +62,7 @@ public class RiskService {
 
         Map<String,Object> averageMap = new HashMap<>();
 
-        //List<MonitorError> simulatorMonitorErrors = monitorService.getSimulateErrorsOfSystem(systemName);
+//        List<MonitorError> simulatorMonitorErrors = monitorService.getSimulateErrorsOfSystem(systemName);
 
         // Likelihood，
         // 第5周~12周(8周) ==> 算高標(ex:8.5)、低標(ex:1.1)，
