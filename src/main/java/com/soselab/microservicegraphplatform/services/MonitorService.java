@@ -114,9 +114,9 @@ public class MonitorService {
         List<Service> ServicesInDB = serviceRepository.findBySysName(systemName);
         Long nowTime = System.currentTimeMillis();
         // 1天
-//        Long lookback = 1 * 24 * 60 * 60 * 1000L;
+        Long lookback = 1 * 24 * 60 * 60 * 1000L;
         // 1小時
-        Long lookback = 1 * 60 * 60 * 1000L;
+//        Long lookback = 1 * 60 * 60 * 1000L;
         int limit = 10000;
 
         // 以下為實際分析錯誤使用的方法

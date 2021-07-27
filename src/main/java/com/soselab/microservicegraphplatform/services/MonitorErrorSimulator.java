@@ -16,7 +16,7 @@ import java.util.*;
 @Configuration
 public class MonitorErrorSimulator {
 
-    private final int totalDay = 168; // 總天數140+28天，當天到前28天計算各服務錯誤總數量，前29~168天計算各服務風險值
+    private final int totalDay = 84; // 總天數140+28天，當天到前28天計算各服務錯誤總數量，前29~168天計算各服務風險值
     private final int hours = 24; // 一天24小時
 
     @Autowired
