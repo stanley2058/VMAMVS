@@ -116,14 +116,12 @@ function SPCGraph(divId, data) {
         },
         yaxis: {
             title: data.valueName,
-            range: [lLimit,uLimit],
             zeroline: true
         },
         xaxis2: {
             domain: [0.8, 1] // 70 to 100% of width
         },
         yaxis2: {
-            range: [lLimit,uLimit],
             anchor: 'x2',
             showticklabels: false
         }
@@ -194,10 +192,8 @@ SPCGraph.prototype.updateData = function (data) {
     Plotly.animate(this.divId, {
         layout: {
             yaxis: {
-                range: [lLimit,uLimit]
             },
             yaxis2: {
-                range: [lLimit,uLimit]
             }
         }
     }, {

@@ -285,32 +285,13 @@ function startSDGGraph(systemName) {
     // monitorErrorsChart
     fetch("/web-page/monitor/getErrorChart/" + systemName.value)
         .then(response => response.json())
-        .then(json => {
+        .then(({map}) => {
+            const labels = Object.keys(map);
+            const datas = Object.values(map);
+            const max = (Math.floor(Math.max(...datas) / 10) + 1) * 10;
 
-            let jsonContent = json["map"];
-            let labels = [];
-            let datas = [];
-
-            for(let key in jsonContent){
-                labels.push(key);
-            }
-            labels.sort(function(a, b) {
-                return new Date(a) - new Date(b);
-            });
-
-            labels.forEach(arrKey => {
-                for(let key in jsonContent) {
-                    if(arrKey === key){
-                        datas.push(jsonContent[key]);
-                        break;
-                    }
-                }
-            });
-
-
-            let ctx = document.getElementById('monitorErrorsChart').getContext('2d');
-
-            let config = {
+            const ctx = document.getElementById('monitorErrorsChart').getContext('2d');
+            const config = {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -348,7 +329,7 @@ function startSDGGraph(systemName) {
                             },
                             ticks: {
                                 min: 0,
-                                max: 40,
+                                max,
                                 stepSize: 10,
                                 fontSize: 20
                             }
@@ -357,7 +338,7 @@ function startSDGGraph(systemName) {
                 }
             };
 
-            let myChart = new Chart(ctx, config);
+            new Chart(ctx, config);
         });
 
 

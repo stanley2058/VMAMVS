@@ -60,13 +60,13 @@ public class MonitorErrorSimulator {
         List<MonitorError> monitorErrors = new ArrayList<>();
 
         long nowTime = System.currentTimeMillis();
-//        int randomErrorNum = random.nextInt((maxErrorNum - minErrorNum) + 1) + minErrorNum;
+        int randomErrorNum = random.nextInt((maxErrorNum - minErrorNum) + 1) + minErrorNum;
 
         for(int i = 0; i < totalDay; i++) {
-            for(int j = 0; j < hours; j++) {
-                for(Service s : ServicesInDB){
+            for(Service s : ServicesInDB){
+                for(int j = 0; j < randomErrorNum; j++) {
                     if(rateRandom(s.getErrorProbability())){
-                        long errorTimestamp = nowTime - i * 24 * 60 * 60 * 1000L - j * 60 * 60 * 1000L;
+                        long errorTimestamp = nowTime - i * 24 * 60 * 60 * 1000L - (random.nextInt(24) + 1) * 60 * 60 * 1000L;
                         if(s.getAppName().toUpperCase().equals("CINEMACATALOG") && s.getVersion().equals("0.0.1-SNAPSHOT")){
                             MonitorError monitorError = new RequestError();
                             monitorError.setTimestamp(errorTimestamp * 1000L);
@@ -89,6 +89,33 @@ public class MonitorErrorSimulator {
                 }
             }
         }
+//        for(int i = 0; i < totalDay; i++) {
+//            for(int j = 0; j < hours; j++) {
+//                for(Service s : ServicesInDB){
+//                    if(rateRandom(s.getErrorProbability())){
+//                        long errorTimestamp = nowTime - i * 24 * 60 * 60 * 1000L - j * 60 * 60 * 1000L;
+//                        if(s.getAppName().toUpperCase().equals("CINEMACATALOG") && s.getVersion().equals("0.0.1-SNAPSHOT")){
+//                            MonitorError monitorError = new RequestError();
+//                            monitorError.setTimestamp(errorTimestamp * 1000L);
+//                            monitorError.setDate(dateFormat2.format(errorTimestamp));
+//                            monitorErrors.add(monitorError);
+//                        }else if(s.getAppName().toUpperCase().equals("GROCERYINVENTORY") && s.getVersion().equals("0.0.1-SNAPSHOT")){
+//                        }else if(s.getAppName().toUpperCase().equals("ORDERING") && s.getVersion().equals("0.0.1-SNAPSHOT")){
+//                            MonitorError monitorError = new ResponseError();
+//                            monitorError.setTimestamp(errorTimestamp * 1000L);
+//                            monitorError.setDate(dateFormat2.format(errorTimestamp));
+//                            monitorErrors.add(monitorError);
+//                        }else if(s.getAppName().toUpperCase().equals("PAYMENT") && s.getVersion().equals("0.0.1-SNAPSHOT")){
+//                            MonitorError monitorError = new NodeError();
+//                            monitorError.setTimestamp(errorTimestamp * 1000L);
+//                            monitorError.setDate(dateFormat2.format(errorTimestamp));
+//                            monitorErrors.add(monitorError);
+//                        }else if(s.getAppName().toUpperCase().equals("NOTIFICATION") && s.getVersion().equals("0.0.1-SNAPSHOT")){
+//                        }
+//                    }
+//                }
+//            }
+//        }
 
         return monitorErrors;
     }
