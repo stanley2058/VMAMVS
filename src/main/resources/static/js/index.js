@@ -286,8 +286,9 @@ function startSDGGraph(systemName) {
     fetch("/web-page/monitor/getErrorChart/" + systemName.value)
         .then(response => response.json())
         .then(({map}) => {
-            const labels = Object.keys(map);
-            const datas = Object.values(map);
+            const sorted = Object.entries(map).sort((a,b) => new Date(a[0]) - new Date(b[0]));
+            const labels = sorted.map(e => e[0]);
+            const datas = sorted.map(e => e[1]);
             const max = (Math.floor(Math.max(...datas) / 10) + 1) * 10;
 
             const ctx = document.getElementById('monitorErrorsChart').getContext('2d');
