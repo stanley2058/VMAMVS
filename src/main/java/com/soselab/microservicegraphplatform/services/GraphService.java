@@ -499,8 +499,13 @@ public class GraphService {
     private boolean updateServices(Map<String, Pair<MgpApplication, Integer>> updateAppsMap) {
         boolean updated = false;
         for (Map.Entry<String, Pair<MgpApplication, Integer>> entry: updateAppsMap.entrySet()) {
-            if (!serviceRepository.setNumberByAppId(entry.getKey(), entry.getValue().getValue())){
-                updated = true;
+            try {
+                if (!serviceRepository.setNumberByAppId(entry.getKey(), entry.getValue().getValue())){
+                    updated = true;
+                }
+            } catch (Exception ex) {
+                System.out.println(entry.getKey());
+                ex.printStackTrace();
             }
         }
 

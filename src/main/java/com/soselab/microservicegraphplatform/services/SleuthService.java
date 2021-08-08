@@ -224,6 +224,12 @@ public class SleuthService {
     }
 
 
+    public int searchZipkinForErrorAmountV1(String appName, String version, long lookBack, long endTime, int limit) {
+        return getTotalNum(searchZipkinV1(appName, version, 500, lookBack, endTime, limit)) +
+               getTotalNum(searchZipkinV1(appName, version, 502, lookBack, endTime, limit)) +
+               getTotalNum(searchZipkinV1(appName, version, 503, lookBack, endTime, limit)) +
+               getTotalNum(searchZipkinV1(appName, version, 504, lookBack, endTime, limit));
+    }
 
 
 

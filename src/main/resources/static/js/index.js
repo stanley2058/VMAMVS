@@ -355,6 +355,8 @@ function startSDGGraph(systemName) {
             let labels_risk = [];
             let datas_risk = [];
 
+            const maxErrorNum = Math.floor((Object.values(jsonContent_servicesErrorNum).sort((a, b) => b - a)[0] || 0) / 10 + 1) * 10;
+
             for(let key in jsonContent_servicesErrorNum){
                 labels_servicesErrorNum.push(key.split(":")[1] + ":" + key.split(":")[2]);
                 datas_servicesErrorNum.push(jsonContent_servicesErrorNum[key]);
@@ -411,7 +413,7 @@ function startSDGGraph(systemName) {
                                     position: 'left',
                                     ticks: {
                                         min: 0,
-                                        max: 80,
+                                        max: maxErrorNum,
                                         stepSize: 10,
                                         fontSize: 20,
                                         fontColor: 'rgba(119,9,10,0.78)'
@@ -422,7 +424,7 @@ function startSDGGraph(systemName) {
                                     position: 'right',
                                     ticks: {
                                         min: 0,
-                                        max: 1.6,
+                                        max: 1.2,
                                         stepSize: 0.2,
                                         fontSize: 20,
                                         fontColor: 'rgba(121,192,54,0.77)'

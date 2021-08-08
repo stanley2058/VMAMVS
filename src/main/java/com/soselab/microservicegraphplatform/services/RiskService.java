@@ -10,9 +10,9 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.Function;
 
 @Configuration
 public class RiskService {
@@ -27,320 +27,201 @@ public class RiskService {
     private GeneralRepository generalRepository;
     @Autowired
     private MonitorService monitorService;
+    @Autowired
+    private MonitorErrorSimulator monitorErrorSimulator;
 
     private final int totalDay = 84; // 總天數84天
     private final int timeInterval = 28; // 28天為間隔
     private final int moveInterval = 1; // 每次移動的距離
 
-    private final int beginTime1 = 8; // 第2周開始
-    private final int endTime1 = 28; // 到第4周
-    private final int beginTime2 = 29; // 第5周開始
-    private final int endTime2 = 84; // 到第12周
+    private final int beginTime1 = 15; // 第2周開始 -> 2
+    private final int endTime1 = 42; // 到第4周 -> 5
+    private final int beginTime2 = 43; // 第5周開始 -> 6
+    private final int endTime2 = 119; // 到第12周 -> 17
 
-    private final int STATUSCODE500 = 500;
-    private final int STATUSCODE502 = 502;
-    private final int STATUSCODE503 = 503;
-    private final int STATUSCODE504 = 504;
+//    private final int STATUSCODE500 = 500;
+//    private final int STATUSCODE502 = 502;
+//    private final int STATUSCODE503 = 503;
+//    private final int STATUSCODE504 = 504;
 
     Map<String,Double> thisWeekErrorNumMap = new HashMap<>();
 
-
-    public void setServiceRisk(String systemName) {
-        long nowTime = System.currentTimeMillis();
-        long lookback = timeInterval * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
-//        long lookback = timeInterval * 60 * 1000L; // 模擬錯誤用分鐘為單位
-
-        // 用來計算第一周的衍生錯誤
-        long lookback_thisWeek = 7 * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
-//        long lookback_thisWeek = 7 * 60 * 1000L; // 模擬錯誤用分鐘為單位
-
-        long move = moveInterval * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
-//        long move = moveInterval * 60 * 1000L; // 模擬用分鐘為單位
-        int limit = 10000;
-
-        List<Service> ServicesInDB = serviceRepository.findBySysName(systemName);
-
-        Map<String,Object> averageMap = new HashMap<>();
-
-//        List<MonitorError> simulatorMonitorErrors = monitorService.getSimulateErrorsOfSystem(systemName);
-
-        // Likelihood，
-        // 第5周~12周(8周) ==> 算高標(ex:8.5)、低標(ex:1.1)，
-        // 第2周~第4周(3周) ==> 找各服務所有的錯誤數，算風險值 (根據高低標縮放比例，縮放至1~0.1)
-
-        // 第5周~12周(8周) ==> 算高標(ex:8.5)、低標(ex:1.1)，
-        ArrayList<Integer> highlowStandards_errors = new ArrayList<>();
-        double highStandard = 0.0;
-        double lowStandard = 0.0;
-        for(Service s : ServicesInDB) {
-            Long endTime = nowTime + beginTime2 * 24 * 60 * 60 * 1000L; // 實際用天數為單位
-//            Long endTime = nowTime - beginTime2 * 60 * 1000L; // 模擬用分鐘數為單位
-
+    private ArrayList<Integer> getHighAndLowStandardErrors(List<Service> services, long endTime, long lookBack, long move, int limit) {
+        ArrayList<Integer> highAndLowStandardErrors = new ArrayList<>();
+        for(Service s : services) {
             for ( int i = 0; i < endTime2 - beginTime2 + 1; i++) {
-                String jsonContent_500 = "[]";
-                String jsonContent_502 = "[]";
-                String jsonContent_503 = "[]";
-                String jsonContent_504 = "[]";
+                // real
+//                int serviceErrors = sleuthService.searchZipkinForErrorAmountV1(s.getAppName(), s.getVersion(), lookBack, endTime, limit);
+                // testing
+                int serviceErrors = monitorErrorSimulator.getSimulatedErrorAmountInRange(s.getSystemName(), s.getAppName(), s.getVersion(), lookBack, endTime, limit);
 
-                try {
-                    jsonContent_500 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE500, lookback, endTime, limit);
-                    jsonContent_502 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE502, lookback, endTime, limit);
-                    jsonContent_503 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE503, lookback, endTime, limit);
-                    jsonContent_504 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE504, lookback, endTime, limit);
-                }catch(NullPointerException e){
-                    e.printStackTrace();
-                }
-
-                int totalnum_500 = sleuthService.getTotalNum(jsonContent_500);
-                int totalnum_502 = sleuthService.getTotalNum(jsonContent_502);
-                int totalnum_503 = sleuthService.getTotalNum(jsonContent_503);
-                int totalnum_504 = sleuthService.getTotalNum(jsonContent_504);
-
-                highlowStandards_errors.add(totalnum_500 + totalnum_502 + totalnum_503 + totalnum_504);
-
+                highAndLowStandardErrors.add(serviceErrors);
                 endTime -= move;
             }
         }
-        Collections.sort(highlowStandards_errors);
-        System.out.println("allllllllllllllllllllllll:"  + highlowStandards_errors);
+        Collections.sort(highAndLowStandardErrors);
+        return highAndLowStandardErrors;
+    }
+    private double getHighStandard(ArrayList<Integer> highAndLowStandardErrors) {
+        int highStandardTotal = 0;
+        for(int i = highAndLowStandardErrors.size() - 1; i > highAndLowStandardErrors.size() * 0.75 + 1; i--)
+            highStandardTotal += highAndLowStandardErrors.get(i);
+        final int highStandardCount = (int)((double)highAndLowStandardErrors.size() / 4 + 1);
+        return (double)highStandardTotal / highStandardCount;
+    }
+    private double getLowStandard(ArrayList<Integer> highAndLowStandardErrors) {
+        int lowStandardTotal = 0;
+        for(int i = 0; i < highAndLowStandardErrors.size() / 4 - 1; i++)
+            lowStandardTotal += highAndLowStandardErrors.get(i);
+        final int lowStandardCount = (int)((double)highAndLowStandardErrors.size() / 4 - 1);
+        return (double)lowStandardTotal / lowStandardCount;
+    }
 
-        int highStandard_total = 0;
-        double highStandard_count = 0.0;
-        int lowStandard_total = 0;
-        double lowStandard_count = 0.0;
-
-
-        for(int i = 0; i < highlowStandards_errors.size()/4-1; i++){
-            lowStandard_total += highlowStandards_errors.get(i);
-            lowStandard_count++;
-        }
-
-        for(int i = highlowStandards_errors.size()-1; i > highlowStandards_errors.size()/4 * 3 + 1; i--) {
-            highStandard_total += highlowStandards_errors.get(i);
-            highStandard_count++;
-        }
-
-        highStandard = highStandard_total/highStandard_count;
-        lowStandard = lowStandard_total/lowStandard_count;
-
-        System.out.println("highStandard: " + highStandard);
-        System.out.println("lowStandard: " + lowStandard);
-
-
-        // 第2周~第4周(3周) ==> 找各服務所有的錯誤數，算風險值 (根據高低標縮放比例，縮放至1~0.1)
-        Map<String,Double> servicesErrorNumMap = new HashMap<>();
-        for(Service s : ServicesInDB) {
-            Long endTime = nowTime + beginTime1 * 24 * 60 * 60 * 1000L; // 實際用天數為單位
-//            Long endTime = nowTime - beginTime1 * 60 * 1000L; // 模擬用分鐘為單位
+    private Map<String, Double> getServiceErrorCountMap(List<Service> services, long endTime, long lookBack, long move, int limit) {
+        Map<String, Double> serviceErrorCountMap = new HashMap<>();
+        for(Service s : services) {
             double serviceErrors = 0.0;
             for ( int i = 0; i < endTime1 - beginTime1 + 1; i++) {
-                String jsonContent_500 = "[]";
-                String jsonContent_502 = "[]";
-                String jsonContent_503 = "[]";
-                String jsonContent_504 = "[]";
-
-                try {
-                    jsonContent_500 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE500, lookback, endTime, limit);
-                    jsonContent_502 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE502, lookback, endTime, limit);
-                    jsonContent_503 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE503, lookback, endTime, limit);
-                    jsonContent_504 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE504, lookback, endTime, limit);
-                }catch(NullPointerException e){
-                    e.printStackTrace();
-                }
-
-                int totalnum_500 = sleuthService.getTotalNum(jsonContent_500);
-                int totalnum_502 = sleuthService.getTotalNum(jsonContent_502);
-                int totalnum_503 = sleuthService.getTotalNum(jsonContent_503);
-                int totalnum_504 = sleuthService.getTotalNum(jsonContent_504);
-
-                serviceErrors += totalnum_500 + totalnum_502 + totalnum_503 + totalnum_504;
-
+                // real
+//                serviceErrors += sleuthService.searchZipkinForErrorAmountV1(s.getAppName(), s.getVersion(), lookBack, endTime, limit);
+                // testing
+                serviceErrors += monitorErrorSimulator.getSimulatedErrorAmountInRange(s.getSystemName(), s.getAppName(), s.getVersion(), lookBack, endTime, limit);
                 endTime -= move;
             }
-
-            servicesErrorNumMap.put(s.getAppId(), serviceErrors);
+            serviceErrorCountMap.put(s.getAppId(), serviceErrors);
         }
+        return serviceErrorCountMap;
+    }
 
-        System.out.println("\nservicesErrorNumMap: ");
-        for (Map.Entry<String, Double> entry : servicesErrorNumMap.entrySet()) {
-            String key = entry.getKey();
-            double value = entry.getValue();
-
-            System.out.println(key + ": " + value);
-        }
-
-        // 找出服務影響到的端點數量
-        Map<String,Double> endpointNumberMap = new HashMap<>();
-        for(Service s : ServicesInDB) {
-
-            String provider = generalRepository.getProviders(s.getId());
-            String consumer = generalRepository.getConsumers(s.getId());
-
-            JSONObject jsonObj = new JSONObject(provider);
-            JSONArray nodes = jsonObj.getJSONArray("nodes");
-
-            JSONObject jsonObj2 = new JSONObject(consumer);
-            JSONArray nodes2 = jsonObj2.getJSONArray("nodes");
+    private Map<String, Double> getEndpointCountMap(List<Service> services) {
+        Map<String,Double> endpointCountMap = new HashMap<>();
+        for(Service s : services) {
+            JSONArray providerNodes = new JSONObject(generalRepository.getProviders(s.getId())).getJSONArray("nodes");
+            JSONArray consumerNodes = new JSONObject(generalRepository.getConsumers(s.getId())).getJSONArray("nodes");
 
             double totalNum = 0;
-            for(int j = 0; j < nodes.length(); j++) {
-                totalNum += getNumofEndpoint_Provider((int)nodes.getJSONObject(j).get("id"));
-            }
+            for(int j = 0; j < providerNodes.length(); j++)
+                totalNum += getNumOfEndpointProvider((int)providerNodes.getJSONObject(j).get("id"));
+            for(int j = 0; j < consumerNodes.length(); j++)
+                totalNum += getNumOfEndpointConsumer((int)consumerNodes.getJSONObject(j).get("id"));
 
-            for(int j = 0; j < nodes2.length(); j++) {
-                totalNum += getNumofEndpoint_Consumer((int)nodes2.getJSONObject(j).get("id"));
-            }
-
-            endpointNumberMap.put(s.getAppId(), (totalNum+1));
-
+            endpointCountMap.put(s.getAppId(), (totalNum + 1));
         }
+        return endpointCountMap;
+    }
 
-        System.out.println("\nendpointNumberMap: ");
-        for (Map.Entry<String, Double> entry : endpointNumberMap.entrySet()) {
-            String key = entry.getKey();
-            double value = entry.getValue();
+    private Map<String, Double> getCurrentWeekErrorCountMap(List<Service> services, Map<String, Double> endpointCountMap, long endTime, long lookBack, int limit) {
+        Map<String, Double> currentWeekErrorMap = new HashMap<>();
+        Map<String, Integer> errorMap = new HashMap<>();
+        for(Service s : services) {
+            // real
+//                int errorAmount = sleuthService.searchZipkinForErrorAmountV1(s.getAppName(), s.getVersion(), lookBack, endTime, limit);
+            // testing
 
-            System.out.println(key + ": " + value);
+            final int errorAmount = monitorErrorSimulator.getSimulatedErrorAmountInRange(s.getSystemName(), s.getAppName(), s.getVersion(), lookBack, endTime, limit);
+            final double serviceErrors = errorAmount * endpointCountMap.get(s.getAppId()) + errorAmount;
+            errorMap.put(s.getAppId(), errorAmount);
+            currentWeekErrorMap.put(s.getAppId(), serviceErrors);
         }
+        System.out.println("Current Week:");
+        System.out.println(errorMap);
+        System.out.println(currentWeekErrorMap);
+        return currentWeekErrorMap;
+    }
 
-        // 正規化[0.1, 1]
-        Map<String,Double> likelihoodMap = new HashMap<>();
-//        likelihoodMap2 = normalization(averageMap, ServicesInDB);
-        likelihoodMap = normalization_likelihood(servicesErrorNumMap, highStandard, lowStandard);
+    public void setServiceRisk(String systemName) {
+        final long nowTime = System.currentTimeMillis();
+        final long lookBack = timeInterval * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
+//        final long lookBack = timeInterval * 60 * 1000L; // 模擬錯誤用分鐘為單位
 
-        // 正規化[0.1, 1]
-        Map<String,Double> impactMap = new HashMap<>();
-        impactMap = normalization_impact(endpointNumberMap, ServicesInDB);
+        // 用來計算第一周的衍生錯誤
+        final long lookBackThisWeek = 7 * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
+//        final long lookBackThisWeek = 7 * 60 * 1000L; // 模擬錯誤用分鐘為單位
+
+        final long move = moveInterval * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
+//        final long move = moveInterval * 60 * 1000L; // 模擬用分鐘為單位
+        final int limit = 10000;
+
+        final List<Service> services = serviceRepository.findBySysName(systemName);
+
+        // Likelihood
+        // 第5周~12周(8周) ==> 算高標(ex:8.5)、低標(ex:1.1)
+        // 第2周~第4周(3周) ==> 找各服務所有的錯誤數，算風險值 (根據高低標縮放比例，縮放至1~0.1)
+
+        // 第5周~12周(8周) ==> 算高標(ex:8.5)、低標(ex:1.1)
+        final long highAndLowEndTime = nowTime - beginTime2 * 24 * 60 * 60 * 1000L; // 實際用天數為單位
+//        final long highAndLowEndTime = nowTime - beginTime2 * 60 * 1000L; // 模擬用分鐘數為單位
+        final ArrayList<Integer> highAndLowStandardErrors = getHighAndLowStandardErrors(
+                services,
+                highAndLowEndTime,
+                lookBack,
+                move,
+                limit
+        );
+        final double highStandard = getHighStandard(highAndLowStandardErrors);
+        final double lowStandard = getLowStandard(highAndLowStandardErrors);
+
+        // 第2周~第4周(3周) ==> 找各服務所有的錯誤數，算風險值 (根據高低標縮放比例，縮放至1~0.1)
+        final long endTime = nowTime - beginTime1 * 24 * 60 * 60 * 1000L; // 實際用天數為單位
+//        final long endTime = nowTime - beginTime1 * 60 * 1000L; // 模擬用分鐘為單位
+        final Map<String, Double> serviceErrorLikelihoodMap = normalizationLikelihood(getServiceErrorCountMap(
+                services,
+                endTime,
+                lookBack,
+                move,
+                limit
+        ), highStandard, lowStandard); // 正規化[0.1, 1]
+
+        // 找出服務影響到的端點數量 & 正規化[0.1, 1]
+        final Map<String, Double> endpointImpactMap = normalizationImpact(getEndpointCountMap(services), services);
 
         // 計算RiskValue，放到neo4j存
-        System.out.println("\nRiskValue: ");
-        for(Service s : ServicesInDB) {
-
-            double riskValue = likelihoodMap.get(s.getAppId()) * impactMap.get(s.getAppId());
+        for(Service s : services) {
+            double riskValue = serviceErrorLikelihoodMap.get(s.getAppId()) * endpointImpactMap.get(s.getAppId());
             serviceRepository.setRiskValueByAppId(s.getAppId(), riskValue);
-
-            System.out.println("Service: " + s.getAppId());
-            System.out.println("likelihoodMap: " + likelihoodMap.get(s.getAppId()));
-            System.out.println("impactMap: " + impactMap.get(s.getAppId()));
-            System.out.println("riskValue: " + riskValue);
-
         }
-
 
         // 第1周 ==> 找各服務所有的錯誤數，算衍生錯誤
-        System.out.println("\nthisWeekErrorNum: ");
-        for(Service s : ServicesInDB) {
-            System.out.println(s.getAppId());
-            Long endTime = nowTime;
-            double serviceErrors = 0.0;
-
-            String jsonContent_500 = "[]";
-            String jsonContent_502 = "[]";
-            String jsonContent_503 = "[]";
-            String jsonContent_504 = "[]";
-
-            try {
-                jsonContent_500 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE500, lookback_thisWeek, endTime, limit);
-                jsonContent_502 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE502, lookback_thisWeek, endTime, limit);
-                jsonContent_503 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE503, lookback_thisWeek, endTime, limit);
-                jsonContent_504 = sleuthService.searchZipkinV1(s.getAppName(), s.getVersion(), STATUSCODE504, lookback_thisWeek, endTime, limit);
-            }catch(NullPointerException e){
-                e.printStackTrace();
-            }
-
-            int totalnum_500 = sleuthService.getTotalNum(jsonContent_500);
-            int totalnum_502 = sleuthService.getTotalNum(jsonContent_502);
-            int totalnum_503 = sleuthService.getTotalNum(jsonContent_503);
-            int totalnum_504 = sleuthService.getTotalNum(jsonContent_504);
-
-            System.out.println("totalnum_500: " + totalnum_500);
-            System.out.println("totalnum_502: " + totalnum_502);
-            System.out.println("totalnum_503: " + totalnum_503);
-            System.out.println("totalnum_504: " + totalnum_504);
-            System.out.println("endpointNumberMap: " + endpointNumberMap.get(s.getAppId()));
-
-
-            serviceErrors += (totalnum_500 + totalnum_502 + totalnum_503 + totalnum_504) * endpointNumberMap.get(s.getAppId()) + (totalnum_500 + totalnum_502 + totalnum_503 + totalnum_504);
-
-
-            thisWeekErrorNumMap.put(s.getAppId(), serviceErrors);
-        }
-
-        System.out.println("\nthisWeekErrorNumMap: ");
-        for (Map.Entry<String, Double> entry : thisWeekErrorNumMap.entrySet()) {
-            String key = entry.getKey();
-            double value = entry.getValue();
-
-            System.out.println(key + ": " + value);
-        }
-
-
-
+        thisWeekErrorNumMap.putAll(getCurrentWeekErrorCountMap(
+                services,
+                endpointImpactMap,
+                nowTime,
+                lookBackThisWeek,
+                limit
+        ));
     }
 
     public RiskPositivelyCorrelatedChart getRiskPositivelyCorrelatedChart(String systemName){
         RiskPositivelyCorrelatedChart riskPositivelyCorrelatedChart = new RiskPositivelyCorrelatedChart();
 
-        long nowTime = System.currentTimeMillis();
-
-        Map<String,Integer> servicesErrorNum = new HashMap<>();
-        Map<String,Double> risk = new HashMap<>();
-
-        List<Service> ServicesInDB = serviceRepository.findBySysName(systemName);
-        // 真實系統用的方法
-        List<MonitorError> monitorErrors = monitorService.getErrorsOfSystem(systemName);
-
-        // 模擬錯誤用的方法
-        //List<MonitorError> monitorErrors = monitorService.getSimulateErrorsOfSystem(systemName);
-
-        for(Service s : ServicesInDB) {
-            risk.put(s.getAppId(), serviceRepository.getRiskValueByAppId(s.getAppId()));
-        }
+        List<Service> services = serviceRepository.findBySysName(systemName);
+        Map<String, Double> risk = new HashMap<>();
+        for(Service s : services) risk.put(s.getAppId(), serviceRepository.getRiskValueByAppId(s.getAppId()));
 
         riskPositivelyCorrelatedChart.setServicesErrorNum(thisWeekErrorNumMap);
         riskPositivelyCorrelatedChart.setRisk(risk);
-
-
         return riskPositivelyCorrelatedChart;
     }
 
-    public double getNumofEndpoint_Provider(long id) {
-        String provider = generalRepository.getProviders(id);
-        JSONObject jsonObj = new JSONObject(provider);
-        JSONArray nodes = jsonObj.getJSONArray("nodes");
+    private double getNumOfEndpoint(long id, Function<Long, String> getNext) {
+        JSONArray nodes = new JSONObject(getNext.apply(id)).getJSONArray("nodes");
 
-        if(nodes.length() > 0){
-            double totalNum = nodes.length();
-            for(int j = 0; j < nodes.length(); j++) {
-                totalNum += getNumofEndpoint_Provider((int)nodes.getJSONObject(j).get("id"));
-            }
-
-            return totalNum;
-        }else{
-            return 0;
+        if (nodes.length() <= 0) return 0;
+        double totalNum = nodes.length();
+        for(int j = 0; j < nodes.length(); j++) {
+            totalNum += getNumOfEndpoint((int)nodes.getJSONObject(j).get("id"), getNext);
         }
+        return totalNum;
     }
-
-    public double getNumofEndpoint_Consumer(long id) {
-
-        String provider = generalRepository.getProviders(id);
-        JSONObject jsonObj = new JSONObject(provider);
-        JSONArray nodes = jsonObj.getJSONArray("nodes");
-
-        if(nodes.length() > 0){
-            double totalNum = nodes.length();
-            for(int j = 0; j < nodes.length(); j++) {
-                totalNum += getNumofEndpoint_Consumer((int)nodes.getJSONObject(j).get("id"));
-            }
-
-            return totalNum;
-        }else{
-            return 0;
-        }
+    public double getNumOfEndpointProvider(long id) {
+        return getNumOfEndpoint(id, generalRepository::getProviders);
+    }
+    public double getNumOfEndpointConsumer(long id) {
+        return getNumOfEndpoint(id, generalRepository::getProviders);
     }
 
     // 正規化[0.1, 1]
-    public Map<String,Double> normalization_likelihood(Map<String,Double> map, double highStandard, double lowStandard){
+    public Map<String,Double> normalizationLikelihood(Map<String,Double> map, double highStandard, double lowStandard){
         double a = 0.1;
         double b = 1;
 
@@ -379,7 +260,7 @@ public class RiskService {
 
 
     // 正規化[0.1, 1]
-    public Map<String,Double> normalization_impact(Map<String,Double> map, List<Service> ServicesInDB){
+    public Map<String,Double> normalizationImpact(Map<String,Double> map, List<Service> ServicesInDB){
         double a = 0.1;
         double b = 1;
 
