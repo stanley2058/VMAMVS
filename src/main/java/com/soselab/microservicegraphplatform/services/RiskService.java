@@ -107,6 +107,8 @@ public class RiskService {
 
             endpointCountMap.put(s.getAppId(), (totalNum + 1));
         }
+        System.out.println("Endpoint Count Map:");
+        System.out.println(endpointCountMap);
         return endpointCountMap;
     }
 
