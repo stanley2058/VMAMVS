@@ -352,88 +352,85 @@ function startSDGGraph(systemName) {
             let labels_servicesErrorNum = [];
             let datas_servicesErrorNum = [];
             let jsonContent_risk = json["risk"];
-            let labels_risk = [];
             let datas_risk = [];
 
             const maxErrorNum = Math.floor((Object.values(jsonContent_servicesErrorNum).sort((a, b) => b - a)[0] || 0) / 10 + 1) * 10;
+            const maxRiskNum = Math.floor((Object.values(jsonContent_risk).sort((a, b) => b - a)[0] || 0) * 10 + 1) / 10;
 
-            for(let key in jsonContent_servicesErrorNum){
-                labels_servicesErrorNum.push(key.split(":")[1] + ":" + key.split(":")[2]);
-                datas_servicesErrorNum.push(jsonContent_servicesErrorNum[key]);
-            }
-            for(let key in jsonContent_risk){
-                labels_risk.push(key.split(":")[1] + ":" + key.split(":")[2]);
-                datas_risk.push(Math.round(jsonContent_risk[key] * 1000) / 1000);
-            }
+            Object.keys(jsonContent_servicesErrorNum).forEach(k => {
+                labels_servicesErrorNum.push(k.split(":")[1] + ":" + k.split(":")[2]);
+                datas_servicesErrorNum.push(jsonContent_servicesErrorNum[k]);
+                datas_risk.push(Math.round(jsonContent_risk[k] * 1000) / 1000);
+            })
 
             let ctx = document.getElementById('RiskPositivelyCorrelatedChart').getContext('2d');
             // 多線
-                let config = {
-                    type: 'line',
-                    data: {
-                        labels: labels_servicesErrorNum,
-                        datasets: [{
-                            label: 'servicesErrorNum',
-                            yAxisID: 'servicesErrorNum',
-                            backgroundColor: 'rgba(119,9,10,0.78)',
-                            borderColor: 'rgba(119,9,10,0.78)',
-                            borderWidth: 5,
-                            data: datas_servicesErrorNum,
-                            fill: false
-                        }, {
-                            label: 'risk',
-                            yAxisID: 'risk',
-                            backgroundColor: 'rgba(121,192,54,0.77)',
-                            borderColor: 'rgba(121,192,54,0.77)',
-                            borderWidth: 5,
-                            data: datas_risk,
-                            fill: false,
-                        }]
+            let config = {
+                type: 'line',
+                data: {
+                    labels: labels_servicesErrorNum,
+                    datasets: [{
+                        label: 'servicesErrorNum',
+                        yAxisID: 'servicesErrorNum',
+                        backgroundColor: 'rgba(119,9,10,0.78)',
+                        borderColor: 'rgba(119,9,10,0.78)',
+                        borderWidth: 5,
+                        data: datas_servicesErrorNum,
+                        fill: false
+                    }, {
+                        label: 'risk',
+                        yAxisID: 'risk',
+                        backgroundColor: 'rgba(121,192,54,0.77)',
+                        borderColor: 'rgba(121,192,54,0.77)',
+                        borderWidth: 5,
+                        data: datas_risk,
+                        fill: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: 'RiskPositivelyCorrelatedChart',
+                        fontSize: 30
                     },
-                    options: {
-                        responsive: true,
-                        title: {
-                            display: true,
-                            text: 'RiskPositivelyCorrelatedChart',
-                            fontSize: 30
-                        },
-                        scales: {
-                            xAxes: [{
-                                gridLines: {
-                                    offsetGridLines: true
-                                },
+                    scales: {
+                        xAxes: [{
+                            gridLines: {
+                                offsetGridLines: true
+                            },
+                            ticks: {
+                                 fontSize: 15
+                            }
+                        }],
+                        yAxes: [
+                            {
+                                id: 'servicesErrorNum',
+                                type: 'linear',
+                                position: 'left',
                                 ticks: {
-                                     fontSize: 15
+                                    min: 0,
+                                    max: maxErrorNum,
+                                    stepSize: 10,
+                                    fontSize: 20,
+                                    fontColor: 'rgba(119,9,10,0.78)'
                                 }
-                            }],
-                            yAxes: [
-                                {
-                                    id: 'servicesErrorNum',
-                                    type: 'linear',
-                                    position: 'left',
-                                    ticks: {
-                                        min: 0,
-                                        max: maxErrorNum,
-                                        stepSize: 10,
-                                        fontSize: 20,
-                                        fontColor: 'rgba(119,9,10,0.78)'
-                                    }
-                                }, {
-                                    id: 'risk',
-                                    type: 'linear',
-                                    position: 'right',
-                                    ticks: {
-                                        min: 0,
-                                        max: 1.2,
-                                        stepSize: 0.2,
-                                        fontSize: 20,
-                                        fontColor: 'rgba(121,192,54,0.77)'
-                                    }
+                            }, {
+                                id: 'risk',
+                                type: 'linear',
+                                position: 'right',
+                                ticks: {
+                                    min: 0,
+                                    max: maxRiskNum,
+                                    stepSize: 0.2,
+                                    fontSize: 20,
+                                    fontColor: 'rgba(121,192,54,0.77)'
                                 }
-                            ]
-                        }
+                            }
+                        ]
                     }
-                };
+                }
+            };
 
             let myChart = new Chart(ctx, config);
         });

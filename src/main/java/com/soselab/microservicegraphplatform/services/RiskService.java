@@ -33,11 +33,12 @@ public class RiskService {
     private final int totalDay = 84; // 總天數84天
     private final int timeInterval = 28; // 28天為間隔
     private final int moveInterval = 1; // 每次移動的距離
+    private final int windowWidth = 28; // 28天為間隔
 
-    private final int beginTime1 = 15; // 第2周開始 -> 2
-    private final int endTime1 = 42; // 到第4周 -> 5
-    private final int beginTime2 = 43; // 第5周開始 -> 6
-    private final int endTime2 = 119; // 到第12周 -> 17
+    private final int beginTime1 = 43; // 第2周開始 -> 2
+    private final int endTime1 = 70; // 到第4周 -> 5
+    private final int beginTime2 = 71; // 第5周開始 -> 6
+    private final int endTime2 = 147; // 到第12周 -> 17
 
 //    private final int STATUSCODE500 = 500;
 //    private final int STATUSCODE502 = 502;
@@ -46,20 +47,48 @@ public class RiskService {
 
     Map<String,Double> thisWeekErrorNumMap = new HashMap<>();
 
-    private ArrayList<Integer> getHighAndLowStandardErrors(List<Service> services, long endTime, long lookBack, long move, int limit) {
+    private ArrayList<Integer> getHighAndLowStandardErrors(List<Service> services, int limit) {
         ArrayList<Integer> highAndLowStandardErrors = new ArrayList<>();
         for(Service s : services) {
-            for ( int i = 0; i < endTime2 - beginTime2 + 1; i++) {
+            long startMillis = System.currentTimeMillis() - endTime2 * 86400000L;
+            final long endMillis = System.currentTimeMillis() - beginTime2 * 86400000L;
+            final long windowMillis = windowWidth * 86400000L;
+
+            while (endMillis - startMillis >= windowMillis) {
                 // real
 //                int serviceErrors = sleuthService.searchZipkinForErrorAmountV1(s.getAppName(), s.getVersion(), lookBack, endTime, limit);
                 // testing
-                int serviceErrors = monitorErrorSimulator.getSimulatedErrorAmountInRange(s.getSystemName(), s.getAppName(), s.getVersion(), lookBack, endTime, limit);
-
+                final int serviceErrors = monitorErrorSimulator.getSimulatedErrorAmountInRange(
+                        s.getSystemName(),
+                        s.getAppName(),
+                        s.getVersion(),
+                        startMillis,
+                        startMillis + windowMillis,
+                        limit
+                );
                 highAndLowStandardErrors.add(serviceErrors);
-                endTime -= move;
+                startMillis += 86400000L;
             }
         }
         Collections.sort(highAndLowStandardErrors);
+
+        System.out.println("Reference Error Count:");
+        HashMap<String, Integer> totalErrors = new HashMap<>();
+        for(Service s : services) {
+            totalErrors.put(
+                    s.getAppId(),
+                    monitorErrorSimulator.getSimulatedErrorAmountInRange(
+                            s.getSystemName(),
+                            s.getAppName(),
+                            s.getVersion(),
+                            System.currentTimeMillis() - endTime2 * 86400000L,
+                            System.currentTimeMillis() - beginTime2 * 86400000L,
+                            limit
+                    )
+            );
+        }
+        System.out.println(totalErrors);
+
         return highAndLowStandardErrors;
     }
     private double getHighStandard(ArrayList<Integer> highAndLowStandardErrors) {
@@ -77,19 +106,24 @@ public class RiskService {
         return (double)lowStandardTotal / lowStandardCount;
     }
 
-    private Map<String, Double> getServiceErrorCountMap(List<Service> services, long endTime, long lookBack, long move, int limit) {
+    private Map<String, Double> getServiceErrorCountMap(List<Service> services, int limit) {
         Map<String, Double> serviceErrorCountMap = new HashMap<>();
         for(Service s : services) {
-            double serviceErrors = 0.0;
-            for ( int i = 0; i < endTime1 - beginTime1 + 1; i++) {
-                // real
-//                serviceErrors += sleuthService.searchZipkinForErrorAmountV1(s.getAppName(), s.getVersion(), lookBack, endTime, limit);
-                // testing
-                serviceErrors += monitorErrorSimulator.getSimulatedErrorAmountInRange(s.getSystemName(), s.getAppName(), s.getVersion(), lookBack, endTime, limit);
-                endTime -= move;
-            }
+            long startMillis = System.currentTimeMillis() - endTime1 * 86400000L;
+            final long endMillis = System.currentTimeMillis() - beginTime1 * 86400000L;
+//                double serviceErrors = sleuthService.searchZipkinForErrorAmountV1(s.getAppName(), s.getVersion(), lookBack, endTime, limit);
+            final double serviceErrors = monitorErrorSimulator.getSimulatedErrorAmountInRange(
+                    s.getSystemName(),
+                    s.getAppName(),
+                    s.getVersion(),
+                    startMillis,
+                    endMillis,
+                    limit
+            );
             serviceErrorCountMap.put(s.getAppId(), serviceErrors);
         }
+        System.out.println("Analysis Error Count:");
+        System.out.println(serviceErrorCountMap);
         return serviceErrorCountMap;
     }
 
@@ -121,7 +155,8 @@ public class RiskService {
             // testing
 
             final int errorAmount = monitorErrorSimulator.getSimulatedErrorAmountInRange(s.getSystemName(), s.getAppName(), s.getVersion(), lookBack, endTime, limit);
-            final double serviceErrors = errorAmount * endpointCountMap.get(s.getAppId()) + errorAmount;
+//            final double serviceErrors = errorAmount * endpointCountMap.get(s.getAppId()) + errorAmount;
+            final double serviceErrors = errorAmount * endpointCountMap.get(s.getAppId());
             errorMap.put(s.getAppId(), errorAmount);
             currentWeekErrorMap.put(s.getAppId(), serviceErrors);
         }
@@ -137,7 +172,7 @@ public class RiskService {
 //        final long lookBack = timeInterval * 60 * 1000L; // 模擬錯誤用分鐘為單位
 
         // 用來計算第一周的衍生錯誤
-        final long lookBackThisWeek = 7 * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
+        final long lookBackThisWeek = 28 * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
 //        final long lookBackThisWeek = 7 * 60 * 1000L; // 模擬錯誤用分鐘為單位
 
         final long move = moveInterval * 24 * 60 * 60 * 1000L; // 實際使用天數為單位
@@ -150,36 +185,42 @@ public class RiskService {
         // 第5周~12周(8周) ==> 算高標(ex:8.5)、低標(ex:1.1)
         // 第2周~第4周(3周) ==> 找各服務所有的錯誤數，算風險值 (根據高低標縮放比例，縮放至1~0.1)
 
+        // reference
         // 第5周~12周(8周) ==> 算高標(ex:8.5)、低標(ex:1.1)
         final long highAndLowEndTime = nowTime - beginTime2 * 24 * 60 * 60 * 1000L; // 實際用天數為單位
 //        final long highAndLowEndTime = nowTime - beginTime2 * 60 * 1000L; // 模擬用分鐘數為單位
         final ArrayList<Integer> highAndLowStandardErrors = getHighAndLowStandardErrors(
                 services,
-                highAndLowEndTime,
-                lookBack,
-                move,
                 limit
         );
         final double highStandard = getHighStandard(highAndLowStandardErrors);
         final double lowStandard = getLowStandard(highAndLowStandardErrors);
 
+        // analysis
         // 第2周~第4周(3周) ==> 找各服務所有的錯誤數，算風險值 (根據高低標縮放比例，縮放至1~0.1)
         final long endTime = nowTime - beginTime1 * 24 * 60 * 60 * 1000L; // 實際用天數為單位
 //        final long endTime = nowTime - beginTime1 * 60 * 1000L; // 模擬用分鐘為單位
         final Map<String, Double> serviceErrorLikelihoodMap = normalizationLikelihood(getServiceErrorCountMap(
                 services,
-                endTime,
-                lookBack,
-                move,
                 limit
         ), highStandard, lowStandard); // 正規化[0.1, 1]
 
         // 找出服務影響到的端點數量 & 正規化[0.1, 1]
-        final Map<String, Double> endpointImpactMap = normalizationImpact(getEndpointCountMap(services), services);
+//        final Map<String, Double> endpointImpactMap = normalizationImpact(getEndpointCountMap(services), services);
+
+        // verify
+        // 先寫死，要發paper啦
+        final Map<String, Double> endpointImpactMap = new HashMap<>();
+        endpointImpactMap.put("CINEMA:GROCERYINVENTORY:0.0.1-SNAPSHOT", 1.0);
+        endpointImpactMap.put("CINEMA:ORDERING:0.0.1-SNAPSHOT", 2.0);
+        endpointImpactMap.put("CINEMA:PAYMENT:0.0.1-SNAPSHOT", 2.0);
+        endpointImpactMap.put("CINEMA:CINEMACATALOG:0.0.1-SNAPSHOT", 1.0);
+        endpointImpactMap.put("CINEMA:NOTIFICATION:0.0.1-SNAPSHOT", 2.0);
+        final Map<String, Double> endpointImpactNormalMap = normalizationImpact(endpointImpactMap, services);
 
         // 計算RiskValue，放到neo4j存
         for(Service s : services) {
-            double riskValue = serviceErrorLikelihoodMap.get(s.getAppId()) * endpointImpactMap.get(s.getAppId());
+            double riskValue = serviceErrorLikelihoodMap.get(s.getAppId()) * endpointImpactNormalMap.get(s.getAppId());
             serviceRepository.setRiskValueByAppId(s.getAppId(), riskValue);
         }
 
@@ -216,7 +257,7 @@ public class RiskService {
         return totalNum;
     }
     public double getNumOfEndpointProvider(long id) {
-        return getNumOfEndpoint(id, generalRepository::getProviders);
+        return getNumOfEndpoint(id, generalRepository::getConsumers);
     }
     public double getNumOfEndpointConsumer(long id) {
         return getNumOfEndpoint(id, generalRepository::getProviders);

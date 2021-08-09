@@ -288,11 +288,9 @@ public class WebPageController {
         return riskService.getRiskPositivelyCorrelatedChart(systemName);
     }
 
-    @GetMapping("/force/schedule/{systemName}")
-    public ResponseEntity<?> forceSchedule(@PathVariable String systemName) {
-
-        monitorService.runScheduled(systemName);
-        monitorService.hourScheduled();
+    @GetMapping("/monitor/clear")
+    public ResponseEntity<?> forceSchedule() {
+        monitorErrorSimulator.clear();
         return ResponseEntity.ok("");
     }
 //

@@ -1,10 +1,7 @@
 package com.soselab.microservicegraphplatform.services;
 
 import com.soselab.microservicegraphplatform.bean.mgp.monitor.MonitorError;
-import com.soselab.microservicegraphplatform.bean.mgp.monitor.error.NodeError;
-import com.soselab.microservicegraphplatform.bean.mgp.monitor.error.RequestError;
-import com.soselab.microservicegraphplatform.bean.mgp.monitor.error.ResponseError;
-import com.soselab.microservicegraphplatform.bean.mgp.monitor.error.TestError;
+import com.soselab.microservicegraphplatform.bean.mgp.monitor.error.*;
 import com.soselab.microservicegraphplatform.bean.neo4j.Service;
 import com.soselab.microservicegraphplatform.repositories.neo4j.ServiceRepository;
 //import jdk.vm.ci.services.Services;
@@ -36,7 +33,9 @@ public class MonitorErrorSimulator {
 
     public MonitorErrorSimulator(){}
 
-
+    public void clear() {
+        systemErrorMap.clear();
+    }
 
 
     // 視覺化 https://noob.tw/web-visualization-chartjs/
@@ -60,7 +59,7 @@ public class MonitorErrorSimulator {
                 s.setErrorProbability(0.003);
             }else if(s.getAppName().equalsIgnoreCase("NOTIFICATION") && s.getVersion().equals("0.0.1-SNAPSHOT")){
 //                s.setErrorProbability(0.00);
-                s.setErrorProbability(0.000);
+                s.setErrorProbability(0.004);
             }
         }
 
@@ -91,6 +90,7 @@ public class MonitorErrorSimulator {
                         }else if(s.getAppName().equalsIgnoreCase("PAYMENT") && s.getVersion().equals("0.0.1-SNAPSHOT")){
                             monitorError = new NodeError();
                         }else if(s.getAppName().equalsIgnoreCase("NOTIFICATION") && s.getVersion().equals("0.0.1-SNAPSHOT")){
+                            monitorError = new TestError2();
                         }
 
                         if (monitorError != null) {
