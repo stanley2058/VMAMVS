@@ -30,6 +30,7 @@ public class MonitorErrorSimulator {
     private static final SimpleDateFormat dateFormat2 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     private final HashMap<String, List<MonitorError>> systemErrorMap = new HashMap<>();
+    private final HashMap<String, HashMap<Integer, Integer>> requestCountMap = new HashMap<>();
 
     public MonitorErrorSimulator(){}
 
@@ -71,10 +72,13 @@ public class MonitorErrorSimulator {
 
         for(int i = 0; i < totalDay; i++) {
             for(Service s : services){
+                requestCountMap.putIfAbsent(s.getAppId(), new HashMap<>());
+
                 int randomErrorNum = random.nextInt((maxErrorNum - minErrorNum) + 1) + minErrorNum;
                 requestCount.putIfAbsent(s.getAppName(), 0);
                 errorCount.putIfAbsent(s.getAppName(), 0);
                 requestCount.merge(s.getAppName(), randomErrorNum, Integer::sum);
+                requestCountMap.get(s.getAppId()).put(i, randomErrorNum);
                 for(int j = 0; j < randomErrorNum; j++) {
                     if(rateRandom(s.getErrorProbability())){
                         errorCount.merge(s.getAppName(), 1, Integer::sum);
@@ -124,6 +128,15 @@ public class MonitorErrorSimulator {
                 e.getErrorAppVersion().equalsIgnoreCase(appVersion) &&
                 errorSet.contains(e.getStatusCode())
         ).limit(limit).toArray().length;
+    }
+
+    public void printRequestTotalInRange(String appId, int fromBackDate, int toBackDate) {
+        int total = 0;
+        HashMap<Integer, Integer> requestMap = requestCountMap.get(appId);
+        for (int i = totalDay - fromBackDate; i <= totalDay - toBackDate; ++i) {
+            if (requestMap.containsKey(i)) total += requestMap.get(i);
+        }
+        System.out.printf("%s=%d\n", appId, total);
     }
 
 

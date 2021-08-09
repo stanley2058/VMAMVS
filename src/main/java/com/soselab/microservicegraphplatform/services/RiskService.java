@@ -72,6 +72,10 @@ public class RiskService {
         }
         Collections.sort(highAndLowStandardErrors);
 
+
+        System.out.println("Reference Request Count:");
+        for(Service s : services)
+            monitorErrorSimulator.printRequestTotalInRange(s.getAppId(), endTime2, beginTime2);
         System.out.println("Reference Error Count:");
         HashMap<String, Integer> totalErrors = new HashMap<>();
         for(Service s : services) {
@@ -124,6 +128,10 @@ public class RiskService {
             );
             serviceErrorCountMap.put(s.getAppId(), serviceErrors);
         }
+
+        System.out.println("Analysis Request Count:");
+        for(Service s : services)
+            monitorErrorSimulator.printRequestTotalInRange(s.getAppId(), endTime1, beginTime1);
         System.out.println("Analysis Error Count:");
         System.out.println(serviceErrorCountMap);
         return serviceErrorCountMap;
@@ -162,9 +170,14 @@ public class RiskService {
             errorMap.put(s.getAppId(), errorAmount);
             currentWeekErrorMap.put(s.getAppId(), serviceErrors);
         }
-        System.out.println("Current Week:");
+
+        System.out.println("Verify True Error:");
         System.out.println(errorMap);
+        System.out.println("Verify Derivative Error:");
         System.out.println(currentWeekErrorMap);
+        System.out.println("Verify Request Total:");
+        for(Service s : services)
+            monitorErrorSimulator.printRequestTotalInRange(s.getAppId(), 28, 0);
         return currentWeekErrorMap;
     }
 
