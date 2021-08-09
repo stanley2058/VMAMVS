@@ -62,7 +62,7 @@ public class RiskService {
                         s.getSystemName(),
                         s.getAppName(),
                         s.getVersion(),
-                        startMillis,
+                        windowMillis,
                         startMillis + windowMillis,
                         limit
                 );
@@ -75,14 +75,16 @@ public class RiskService {
         System.out.println("Reference Error Count:");
         HashMap<String, Integer> totalErrors = new HashMap<>();
         for(Service s : services) {
+            final long start = System.currentTimeMillis() - endTime2 * 86400000L;
+            final long end = System.currentTimeMillis() - beginTime2 * 86400000L;
             totalErrors.put(
                     s.getAppId(),
                     monitorErrorSimulator.getSimulatedErrorAmountInRange(
                             s.getSystemName(),
                             s.getAppName(),
                             s.getVersion(),
-                            System.currentTimeMillis() - endTime2 * 86400000L,
-                            System.currentTimeMillis() - beginTime2 * 86400000L,
+                            end - start,
+                            end,
                             limit
                     )
             );
@@ -109,14 +111,14 @@ public class RiskService {
     private Map<String, Double> getServiceErrorCountMap(List<Service> services, int limit) {
         Map<String, Double> serviceErrorCountMap = new HashMap<>();
         for(Service s : services) {
-            long startMillis = System.currentTimeMillis() - endTime1 * 86400000L;
+            final long startMillis = System.currentTimeMillis() - endTime1 * 86400000L;
             final long endMillis = System.currentTimeMillis() - beginTime1 * 86400000L;
 //                double serviceErrors = sleuthService.searchZipkinForErrorAmountV1(s.getAppName(), s.getVersion(), lookBack, endTime, limit);
             final double serviceErrors = monitorErrorSimulator.getSimulatedErrorAmountInRange(
                     s.getSystemName(),
                     s.getAppName(),
                     s.getVersion(),
-                    startMillis,
+                    endMillis - startMillis,
                     endMillis,
                     limit
             );
